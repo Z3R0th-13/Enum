@@ -1,15 +1,6 @@
 # Enum
 # Just a simple script to do some basic enumeration of a target system. 
-#
-# ******************************************************************
-# ******************************************************************
-# **                                                              **
-# **                            Enum                              **
-# **                    Written by: Z3R0th                        **
-# **                                                              **
-# **                                                              **
-# ******************************************************************
-# ******************************************************************
+
 # Credit to Matthew Graeber and his numerous works in Offensive PowerShell
 # Credit to Andrew Chiles for numerous ideas for enumeration
 # Credit to The Scripting Guys for all of their amazing examples
