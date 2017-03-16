@@ -1,5 +1,5 @@
 # Enum
-Just a simple script to do some basic enumeration of a target system. 
+Just a simple script to do some basic enumeration of a target system
 
 Credit to Matthew Graeber and his numerous works in Offensive PowerShell
 Credit to Andrew Chiles for numerous ideas for enumeration
