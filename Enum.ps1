@@ -1,30 +1,25 @@
-# Just a simple script to do some basic enumeration of a target system. 
+#Just a simple script to do some basic enumeration of a target system. 
 #
-# ******************************************************************
-# ******************************************************************
-# **                                                              **
-# **                            Enum                              **
-# **                    Written by: Z3R0th                        **
-# **                                                              **
-# **                                                              **
-# ******************************************************************
-# ******************************************************************
-
-# Credit to Matthew Graeber and his numerous works in Offensive PowerShell
-# Credit to Andrew Chiles for numerous ideas
-# Credit to The Scripting Guys for all of their amazing examples 
-# Lastly, thank you to Technet for having all of the documentation I could want
-
-# I know the enumeration isn't quite perfect, this is still a work in progress that will be updated from time to time. 
-# I still have a lot of work to do in regards to suggesting exploits, I know there's more that goes into it than just 
-# checking for patches. Though I hope to add other functionality in due time. I am by no means a coder, so I'm sure 
-# there are more efficient ways of performing many if not all of these tasks, but this works for me. Any advice on better 
-# practices are more than appreciated. Enjoy!
-
+#******************************************************************
+#******************************************************************
+#**                                                              **
+#**                           Enum                               **
+#**                    Written by: Z3R0th                        **
+#**                                                              **
+#**                                                              **
+#******************************************************************
+#******************************************************************
 
 #Print the time this script was ran. Useful for knowing access times. 
 $Access = Get-Date
 Write-Output "[***] You ran this script on $Access [***]"
+
+#Determine OS running on target
+$ComputerName = $env:computername
+$OS = (Get-WmiObject -Class Win32_OperatingSystem -ComputerName $ComputerName | select caption | select-string windows)-split("=", "}", "{")[0] -replace "}"| select-string windows
+If ($OS -match "10") {Write-Output "[*] You are running Windows 10!"}
+If ($OS -match "8") {Write-Output "[*] You are running Windows 8!"}
+If ($OS -match "7") {Write-Output "[*] You are running Windows 7!"}
 
 #Check Execution Policy on target
 $Execute = Get-ExecutionPolicy
@@ -33,6 +28,7 @@ Write-Output "[*] The Execution Policy is set to $Execute"
 #Look and see if there is a startup folder for the user you are
 $StartUp = test-path $env:homepath\appdata\roaming\microsoft\windows\start` menu\programs\startup
 If ($StartUp -eq "True") {Write-Output "[*] A Startup folder exists! You could establish persistence this way using Invoke-Persistence.ps1!"} Else {Write-Output "[*] There is no startup folder :c"}
+Write-Host "[*] Startup folder exists at '$env:homepath\appdata\roaming\microsoft\windows\start` menu\programs\startup" -foreground "Cyan" -background "black"
 
 #Determine if running in a 32 or 64 bit environment
 If ((Get-WmiObject -Class Win32_OperatingSystem -ComputerName $ENV:Computername).OSArchitecture -eq '64-bit') {
@@ -42,7 +38,7 @@ Else {
 
 #Check if running as Administrator
 $IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-If ($IsAdmin){Write-Output "[*] Running with Administrator Privileges! GO HACK ALL THE THINGS!"} Else {Write-Warning "[*] You're stuck in userland, better escalate!"}
+If ($IsAdmin) {Write-Host "[*] Running with Administrator Privileges! GO HACK ALL THE THINGS!" -foreground "Cyan" -background "black"} Else {Write-Warning "[*] You're stuck in userland, better escalate!"}
 
 #Get Principal Name
 $PrincipalName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -55,8 +51,6 @@ Write-Output "[*] You are in the $Domain domain"
 #Get current IPv4 Address
 $IP = (ipconfig | select-string IPv4)-split(":")[-1] | findstr [0-9].\.
 Write-Output "[*] Your IP is $IP"
-#$IP = ((ipconfig | findstr [0-9].\.)[0]).split()[-1]
-#Write-Output " Your IP is $IP"
 
 #Print which PowerShell Version you're currently running
 $Version = $PSVersionTable.PSVersion.Major
@@ -71,23 +65,28 @@ Else {Write-Warning "[*] You're running in a Multi-Threaded Apartment State. It'
 
 #Find the Explorer Process and PID. Useful for Cobalt Strike when capturing Keystrokes and Screenshots
 $Explore = get-process -name explorer | select -expand id
-Write-Output "[*] The PID for Explorer is $Explore, use this with Cobalt Strike's keylogger and screenshot grabber"
+Write-Host "[*] The PID for Explorer is $Explore, use this with Cobalt Strike's keylogger and screenshot grabber" -foreground "yellow" -background "black"
 
 #Query for currently logged in users and whether or not they are active
-Write-Output "[*] The following users are currently logged in"
-$Current = query user | fl | out-host
+Write-Host "[*] The following users are currently logged in" -foreground "yellow" -background "black"
+If ($OS -match "7") {$Current = query user | fl | out-host}
+#Windows 10 use this
+If ($OS -match '10') {Get-WmiObject -Class Win32_ComputerSystem | select username}
 
 #List shares available
+If ($OS -match "7") {
 Write-Output "[*] The following shares are available"
-PSdrive | select-object * -exclude used, free, provider, credential, currentlocation | fl
+PSdrive | select-object * -exclude used, free, provider, credential, currentlocation | fl}
 
 #List Local Admins
-#$Local = net localgroup administrators
-#Write-Output "[*] The following are local Administrators`n $Local"
+Write-Host "[*] These users are also local Administrators!" -foreground "yellow" -background "black"
+$ADSIComputer = [ADSI] ("WinNT://$ComputerName, computer")
+$Group = $ADSIComputer.psbase.children.find("Administrators", "Group")
+$Group.psbase.invoke('members') | ForEach { $_.GetType().InvokeMember("Name", 'getproperty', $null, $_, $null) }
 
 #Gather installed hotfixes
-Write-Output "[*] Looking for possible exploits "
-$Hotfix = Get-HotFix | Select-Object * -exclude installedon, __path, __genus, __class, __superclass, __dynasty, __relpath, __property_count, __derivation, __server, __namespace, caption, csname, fixcomments, installdate, installedby, name, servicepackineffect, scope, path, options, classpath, properties, systemproperties, qualifiers, site, container, description, status | sort | ft -auto 
+Write-Host "[*] Looking for possible exploits, this could take some time" -foreground "red" -background "black"
+$Hotfix = Get-HotFix | Select-Object * -exclude installedon, __path, __genus, __class, __superclass, __dynasty, __relpath, __property_count, __derivation, __server, __namespace, caption, csname, fixcomments, installdate, installedby, name, servicepackineffect, scope, path, options, classpath, properties, systemproperties, qualifiers, site, container, description, status | sort | ft -auto
 $Hotfix > $env:APPDATA\Microsoft\Windows\Updates.txt
 #Eventually I want to add in more exploits to check against.
 #List of KB's to check against 
@@ -109,19 +108,18 @@ $PossibleSploit = diff (get-content $env:APPDATA\Microsoft\Windows\Win32Logs.txt
 $Compare
 $PossibleSploit
 foreach($line in get-content $env:APPDATA\Microsoft\Windows\Updater.txt){
-    if($line -match "KB3136041") {Write-Output "[*] You might be able to use MS_16_016_Webdav [*]"}
-    if($line -match "KB3155533") {Write-Output "[*] You might be able to use MS16_051_vbscript [*]"}
-    if($line -match "KB3143141") {Write-Output "[*] You might be able to use MS16_032_secondary_logon_handle_privesc [*]"}
-    if($line -match "KB3041836") {Write-Output "[*] You might be able to use MS15_020_shortcut_icon_dllloader [*]"}
-    if($line -match "KB3057191") {Write-Output "[*] You might be able to use MS15_051_client_copy_image [*]"}
-    if($line -match "KB3011443") {Write-Output "[*] You might be able to use MS14_064_ole_code_execution [*]"}
-    if($line -match "KB3000869") {Write-Output "[*] You might be able to use MS14_060_sandworm [*]"}
-    if($line -match "KB3000061") {Write-Output "[*] You might be able to use MS14_058_track_popup_menu [*]"}
-    if($line -match "KB2989935") {Write-Output "[*] You might be able to use MS14_070_tcpip_ioctl [*]"}
-    if($line -match "KB2850851") {Write-Output "[*] You might be able to use MS13_053_schlamperei [*]"}
-    else {Write-Verbose "I wasn't able to find any exploits, but that doesn't mean there aren't any [*]"}
+    if($line -match "KB3136041") {Write-Host "[*] You might be able to use MS_16_016_Webdav [*]" -foreground "cyan" -background "black"} 
+    if($line -match "KB3155533") {Write-Host "[*] You might be able to use MS16_051_vbscript [*]" -foreground "cyan" -background "black"}
+    if($line -match "KB3143141") {Write-Host "[*] You might be able to use MS16_032_secondary_logon_handle_privesc [*]" -foreground "cyan" -background "black"}
+    if($line -match "KB3041836") {Write-Host "[*] You might be able to use MS15_020_shortcut_icon_dllloader [*]" -foreground "cyan" -background "black"}
+    if($line -match "KB3057191") {Write-Host "[*] You might be able to use MS15_051_client_copy_image [*]" -foreground "cyan" -background "black"}
+    if($line -match "KB3011443") {Write-Host "[*] You might be able to use MS14_064_ole_code_execution [*]" -foreground "cyan" -background "black"}
+    if($line -match "KB3000869") {Write-Host "[*] You might be able to use MS14_060_sandworm [*]" -foreground "cyan" -background "black"}
+    if($line -match "KB3000061") {Write-Host "[*] You might be able to use MS14_058_track_popup_menu [*]" -foreground "cyan" -background "black"}
+    if($line -match "KB2989935") {Write-Host "[*] You might be able to use MS14_070_tcpip_ioctl [*]" -foreground "cyan" -background "black"}
+    if($line -match "KB2850851") {Write-Host "[*] You might be able to use MS13_053_schlamperei [*]" -foreground "cyan" -background "black"}
 }
-#Time to clean up any trace we wrote to disk. Even if the user is watching that particular folder they shouldn't see anything due to how fast the data is being processed.
+#Time to clean up any trace we wrote to disk. Even if the user is watching that particular folder they shouldn't see anything due to how fast the data is being processed. Also, the data doesn't go to the recycle bin as this is done via command line.
 rm $env:APPDATA\Microsoft\Windows\Updates.txt
 rm $env:APPDATA\Microsoft\Windows\Win32Logs.txt
 rm $env:APPDATA\Microsoft\Windows\Updater.txt
