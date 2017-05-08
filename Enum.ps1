@@ -71,12 +71,11 @@ Write-Output "[*] The PID for Explorer is $Explore, use this with Cobalt Strike'
 Write-Output "[*] The following users are currently logged in"
 If ($OS -match "7") {$Current = query user | fl | out-host}
 # Windows 10 use this
-If ($OS -match '10') {Get-WmiObject -Class Win32_ComputerSystem | select username}
+Else {Get-WmiObject -Class Win32_ComputerSystem | select username}
 
 # List shares available
-If ($OS -match "7") {
 Write-Output "[*] The following shares are available"
-PSdrive | select-object * -exclude used, free, provider, credential, currentlocation | fl}
+PSdrive | select-object * -exclude used, free, provider, credential, currentlocation | fl
 
 # List Local Admins
 Write-Output "[*] These users are also local Administrators!"
