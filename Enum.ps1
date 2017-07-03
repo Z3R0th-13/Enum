@@ -17,9 +17,12 @@ Write-Output "[***] You ran this script on $Access [***]"
 # Determine OS running on target
 $ComputerName = $env:computername
 $OS = (Get-WmiObject -Class Win32_OperatingSystem -ComputerName $ComputerName | select caption | select-string windows)-split("=", "}", "{")[0] -replace "}"| select-string windows
-If ($OS -match "10") {Write-Output "[*] You are running Windows 10!"}
-If ($OS -match "8") {Write-Output "[*] You are running Windows 8!"}
-If ($OS -match "7") {Write-Output "[*] You are running Windows 7!"}
+If ($OS -match "10") {Write-Output "[*] You are running $OS"}
+If ($OS -match " 8") {Write-Output "[*] You are running $OS"}
+If ($OS -match " 7") {Write-Output "[*] You are running $OS"}
+if ($OS -match "2016") {Write-Output "[*] You are running $OS"}
+If ($OS -match "2012") {Write-Output "[*] You are running $OS"}
+If ($OS -match "2008") {Write-Output "[*] You are running $OS"}
 
 # Check Execution Policy on target
 $Execute = Get-ExecutionPolicy
@@ -27,8 +30,7 @@ Write-Output "[*] The Execution Policy is set to $Execute"
 
 # Look and see if there is a startup folder for the user you are
 $StartUp = test-path $env:homepath\appdata\roaming\microsoft\windows\start` menu\programs\startup
-If ($StartUp -eq "True") {Write-Output "[*] A Startup folder exists! You could establish persistence this way using Invoke-Persistence.ps1!"} Else {Write-Output "[*] There is no startup folder :c"}
-Write-Output "[*] Startup folder exists at '$env:homepath\appdata\roaming\microsoft\windows\start` menu\programs\startup"
+If ($StartUp -eq "True") {Write-Output "[*] A Startup folder exists at $env:homepath\appdata\roaming\microsoft\windows\start` menu\programs\startup!"} Else {Write-Output "[*] There is no startup folder :c"}
 
 # Determine if running in a 32 or 64 bit environment
 If ((Get-WmiObject -Class Win32_OperatingSystem -ComputerName $ENV:Computername).OSArchitecture -eq '64-bit') {
@@ -50,7 +52,7 @@ Write-Output "[*] You are in the $Domain domain"
 
 # Get current IPv4 Address
 $IP = (ipconfig | select-string IPv4)-split(":")[-1] | findstr [0-9].\.
-Write-Output "[*] Your IP is $IP"
+Write-Output "[*] Your IP is$IP"
 
 # Print which PowerShell Version you're currently running
 $Version = $PSVersionTable.PSVersion.Major
@@ -77,49 +79,54 @@ Else {Get-WmiObject -Class Win32_ComputerSystem | select username}
 Write-Output "[*] The following shares are available"
 PSdrive | select-object * -exclude used, free, provider, credential, currentlocation | fl
 
+#List mapped drives
+Write-Output "[*] The following drives have been mapped to the system"
+Get-WmiObject -Class Win32_MappedLogicalDisk | select Name, ProviderName
+
 # List Local Admins
 Write-Output "[*] These users are also local Administrators!"
 $ADSIComputer = [ADSI] ("WinNT://$ComputerName, computer")
 $Group = $ADSIComputer.psbase.children.find("Administrators", "Group")
-$Group.psbase.invoke('members') | ForEach { $_.GetType().InvokeMember("Name", 'getproperty', $null, $_, $null) }
+if ($OS -match "10") {$Group.psbase.invoke('members') | ForEach { $_.GetType().InvokeMember("Name", 'getproperty', $null, $_, $null) }}
+Else {net localgroup Administrators}
 
 # Gather installed hotfixes
-Write-Output "[*] Looking for possible exploits, this could take some time"
-$Hotfix = Get-HotFix | Select-Object * -exclude installedon, __path, __genus, __class, __superclass, __dynasty, __relpath, __property_count, __derivation, __server, __namespace, caption, csname, fixcomments, installdate, installedby, name, servicepackineffect, scope, path, options, classpath, properties, systemproperties, qualifiers, site, container, description, status | sort | ft -auto
-$Hotfix > $env:APPDATA\Microsoft\Windows\Updates.txt
+#Write-Output "[*] Looking for possible exploits, this could take some time"
+#$Hotfix = Get-HotFix | Select-Object * -exclude installedon, __path, __genus, __class, __superclass, __dynasty, __relpath, __property_count, __derivation, __server, __namespace, caption, csname, fixcomments, installdate, installedby, name, servicepackineffect, scope, path, options, classpath, properties, systemproperties, qualifiers, site, container, description, status | sort | ft -auto
+#$Hotfix > $env:APPDATA\Microsoft\Windows\Updates.txt
 # Eventually I want to add in more exploits to check against.
 # List of KB's to check against 
-echo "KB3136041" > $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB3155533" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB3143141" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB3041836" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB3057191" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB3011443" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB3000869" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB3000061" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB2989935" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB2850851" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-echo "KB2909210" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB3136041" > $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB3155533" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB3143141" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB3041836" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB3057191" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB3011443" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB3000869" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB3000061" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB2989935" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB2850851" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#echo "KB2909210" >> $env:APPDATA\Microsoft\Windows\Win32Logs.txt
 # Compare the list of Hotfixes currently installed against the list of KB's for known exploits. This will find which ones are on both lists and export that data to a new text file. 
-$Compare = diff (get-content $env:APPDATA\Microsoft\Windows\Updates.txt ) (get-content $env:APPDATA\Microsoft\Windows\Win32Logs.txt) -includeequal | select-string === | foreach-object {$_-replace("@{InputObject=", "")} | foreach-object {$_-replace("; SideIndicator===}", "")} > $env:APPDATA\Microsoft\Windows\WinUpdate.txt
+#$Compare = diff (get-content $env:APPDATA\Microsoft\Windows\Updates.txt ) (get-content $env:APPDATA\Microsoft\Windows\Win32Logs.txt) -includeequal | select-string === | foreach-object {$_-replace("@{InputObject=", "")} | foreach-object {$_-replace("; SideIndicator===}", "")} > $env:APPDATA\Microsoft\Windows\WinUpdate.txt
 # With the new text file we will compare that with our known KB's and exclude all of the matches. For the KB's that don't match it means we might be able to use those exploits on target if my logic is right.
-$PossibleSploit = diff (get-content $env:APPDATA\Microsoft\Windows\Win32Logs.txt) (get-content $env:APPDATA\Microsoft\Windows\WinUpdate.txt) | ft InputObject -hide > $env:APPDATA\Microsoft\Windows\Updater.txt
-$Compare
-$PossibleSploit
-foreach($line in get-content $env:APPDATA\Microsoft\Windows\Updater.txt){
-    if($line -match "KB3136041") {Write-Output "[*] You might be able to use MS_16_016_Webdav [*]"}
-    if($line -match "KB3155533") {Write-Output "[*] You might be able to use MS16_051_vbscript [*]"} 
-    if($line -match "KB3143141") {Write-Output "[*] You might be able to use MS16_032_secondary_logon_handle_privesc [*]"}
-    if($line -match "KB3041836") {Write-Output "[*] You might be able to use MS15_020_shortcut_icon_dllloader [*]"}
-    if($line -match "KB3057191") {Write-Output "[*] You might be able to use MS15_051_client_copy_image [*]"}
-    if($line -match "KB3011443") {Write-Output "[*] You might be able to use MS14_064_ole_code_execution [*]"}
-    if($line -match "KB3000869") {Write-Output "[*] You might be able to use MS14_060_sandworm [*]"}
-    if($line -match "KB3000061") {Write-Output "[*] You might be able to use MS14_058_track_popup_menu [*]"}
-    if($line -match "KB2989935") {Write-Output "[*] You might be able to use MS14_070_tcpip_ioctl [*]"}
-    if($line -match "KB2850851") {Write-Output "[*] You might be able to use MS13_053_schlamperei [*]"}
-}
+#$PossibleSploit = diff (get-content $env:APPDATA\Microsoft\Windows\Win32Logs.txt) (get-content $env:APPDATA\Microsoft\Windows\WinUpdate.txt) | ft InputObject -hide > $env:APPDATA\Microsoft\Windows\Updater.txt
+#$Compare
+#$PossibleSploit
+#foreach($line in get-content $env:APPDATA\Microsoft\Windows\Updater.txt){
+#    if($line -match "KB3136041") {Write-Output "[*] You might be able to use MS_16_016_Webdav [*]"}
+#    if($line -match "KB3155533") {Write-Output "[*] You might be able to use MS16_051_vbscript [*]"} 
+#    if($line -match "KB3143141") {Write-Output "[*] You might be able to use MS16_032_secondary_logon_handle_privesc [*]"}
+#    if($line -match "KB3041836") {Write-Output "[*] You might be able to use MS15_020_shortcut_icon_dllloader [*]"}
+#   if($line -match "KB3057191") {Write-Output "[*] You might be able to use MS15_051_client_copy_image [*]"}
+#    if($line -match "KB3011443") {Write-Output "[*] You might be able to use MS14_064_ole_code_execution [*]"}
+#    if($line -match "KB3000869") {Write-Output "[*] You might be able to use MS14_060_sandworm [*]"}
+#    if($line -match "KB3000061") {Write-Output "[*] You might be able to use MS14_058_track_popup_menu [*]"}
+#    if($line -match "KB2989935") {Write-Output "[*] You might be able to use MS14_070_tcpip_ioctl [*]"}
+#    if($line -match "KB2850851") {Write-Output "[*] You might be able to use MS13_053_schlamperei [*]"}
+#}
 # Time to clean up any trace we wrote to disk. Even if the user is watching that particular folder they shouldn't see anything due to how fast the data is being processed. Also, the data doesn't go to the recycle bin as this is done via command line.
-rm $env:APPDATA\Microsoft\Windows\Updates.txt
-rm $env:APPDATA\Microsoft\Windows\Win32Logs.txt
-rm $env:APPDATA\Microsoft\Windows\Updater.txt
-rm $env:APPDATA\Microsoft\Windows\WinUpdate.txt
+#rm $env:APPDATA\Microsoft\Windows\Updates.txt
+#rm $env:APPDATA\Microsoft\Windows\Win32Logs.txt
+#rm $env:APPDATA\Microsoft\Windows\Updater.txt
+#rm $env:APPDATA\Microsoft\Windows\WinUpdate.txt
