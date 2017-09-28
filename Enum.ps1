@@ -90,6 +90,10 @@ $Group = $ADSIComputer.psbase.children.find("Administrators", "Group")
 if ($OS -match "10") {$Group.psbase.invoke('members') | ForEach { $_.GetType().InvokeMember("Name", 'getproperty', $null, $_, $null) }}
 Else {net localgroup Administrators}
 
+# Check whether or not SMBv1 is enabled or disabled. 
+$SMBCheck = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Lanmanserver\Parameters" -Name SMB1 | Select-Object "SMB1")
+if ( $SMBCheck -match "0" ) {Write-Host "SMBv1 is currently disabled"} Else {Write-Host "SMBv1 is enabled!"}
+
 # Gather installed hotfixes
 #Write-Output "[*] Looking for possible exploits, this could take some time"
 #$Hotfix = Get-HotFix | Select-Object * -exclude installedon, __path, __genus, __class, __superclass, __dynasty, __relpath, __property_count, __derivation, __server, __namespace, caption, csname, fixcomments, installdate, installedby, name, servicepackineffect, scope, path, options, classpath, properties, systemproperties, qualifiers, site, container, description, status | sort | ft -auto
