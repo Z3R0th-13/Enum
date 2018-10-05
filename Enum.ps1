@@ -87,9 +87,8 @@ Get-WmiObject -Class Win32_MappedLogicalDisk | select Name, ProviderName
 Write-Output "[*] These users are also local Administrators!"
 $ADSIComputer = [ADSI] ("WinNT://$ComputerName, computer")
 $Group = $ADSIComputer.psbase.children.find("Administrators", "Group")
-if ($OS -match "10") {$Group.psbase.invoke('members') | ForEach { $_.GetType().InvokeMember("Name", 'getproperty', $null, $_, $null) }}
-Else {net localgroup Administrators}
+net localgroup Administrators
 
 # Check whether or not SMBv1 is enabled or disabled. 
-$SMBCheck = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Lanmanserver\Parameters" -Name SMB1 | Select-Object "SMB1")
-if ( $SMBCheck -match "0" ) {Write-Host "SMBv1 is currently disabled"} Else {Write-Host "SMBv1 is enabled!"}
+$SMBCheck = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Lanmanserver\Parameters" -Name SMB1 -ErrorAction SilentlyContinue | Select-Object "SMB1")
+if ( $SMBCheck -match "0" ) {Write-Host "SMBv1 is currently disabled"} Elseif ( $SMBCheck -match "1" ) {Write-Host "SMBv1 is enabled!"} Else {Write-Host "I don't see the key for SMBv1..."}
