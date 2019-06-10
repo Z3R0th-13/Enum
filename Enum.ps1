@@ -1,3 +1,4 @@
+#
 # Just a simple script to do some basic enumeration of a target system. 
 #
 # ******************************************************************
